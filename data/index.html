@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Heater Monitor Config</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <script>
+  
+	function onThingSpeakCheckChanged(e) {
+		const els = document.getElementsByClassName("thingspeak");
+		for (const el of els) {
+			if (e.target.checked) {
+				el.removeAttribute("disabled");
+			} 
+			else {
+				el.setAttribute("disabled", true);
+			}
+		}
+	}
+  
+	function submit() {		
+	
+		const networkName = document.getElementById("networkName").value;
+		const networkPassword = document.getElementById("networkPassword").value;
+		const botToken = document.getElementById("botToken").value;
+		const botAdmin = document.getElementById("botAdmin").value;
+		const otaUpdatePassword = document.getElementById("otaUpdatePassword").value;
+		const thingSpeakEnabled = document.getElementById("thingSpeakEnabled").checked;
+		const thingSpeakApiKey = document.getElementById("thingSpeakApiKey").value;
+		const thingSpeakReportInterval = document.getElementById("thingSpeakReportInterval").value;
+	
+		if (networkName.trim().length === 0) {
+			alert("Please enter Wi-Fi Access Point name");
+			return;
+		}
+		else if (networkPassword.trim().length === 0) {
+			alert("Please enter password for Wi-Fi Access Point");
+			return;
+		}
+		else if (botToken.trim().length === 0) {
+			alert("Please enter Telegram bot token");
+			return;
+		}
+		else if (botAdmin.trim().length === 0) {
+			alert("Please enter Telegram username who will acceess the bot");
+			return;
+		}
+		else if (otaUpdatePassword.trim().length === 0) {
+			alert("Please enter password for OTA updates");
+			return;
+		}
+		else if (thingSpeakEnabled && thingSpeakApiKey.trim().length === 0) {
+			alert("Please enter ThingSpeak API Key");
+			return;
+		}
+		else if (thingSpeakEnabled && thingSpeakReportInterval < 1) {
+			alert("Please enter ThingSpeak report interval, in seconds. The value should not be less than 1 second.");
+			return;
+		}
+		
+	
+		disableControls();
+		
+		try {
+			const xhr = new XMLHttpRequest();
+			xhr.open('POST', '/');	
+			xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+			xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');			
+			xhr.onload = function() {
+				if (xhr.status === 201) {
+					document.getElementById("progress-message").innerHTML = xhr.responseText;
+					submit();
+				}
+				else {
+					document.getElementById("progress-message").innerHTML = "";
+					enableControls();
+					alert(xhr.responseText);
+				}
+			};
+			xhr.send(				
+				'networkName=' + encodeURIComponent(networkName) +
+				'&networkPassword=' + encodeURIComponent(networkPassword) +
+				'&botToken=' + encodeURIComponent(botToken) + 
+				'&botAdmin=' + encodeURIComponent(botAdmin) +
+				'&otaUpdatePassword=' + encodeURIComponent(otaUpdatePassword) +
+				'&thingSpeakEnabled=' + encodeURIComponent(thingSpeakEnabled ? "1" : "0") +
+				'&thingSpeakApiKey=' + encodeURIComponent(thingSpeakApiKey) +
+				'&thingSpeakReportInterval=' + encodeURIComponent(thingSpeakReportInterval)
+			);
+		}
+		catch (err) {
+			alert(err.message);
+			enableControls();
+		}
+	}
+	
+	function reboot() {
+		disableControls();
+		try {
+			const xhr = new XMLHttpRequest();
+			xhr.open('POST', '/reboot');	
+			xhr.setRequestHeader('Access-Control-Allow-Origin', '*');		
+			xhr.send();
+		}
+		catch (err) {
+			alert(err.message);
+			enableControls();
+		}
+	}
+	
+	function disableControls() {
+		const fields = document.getElementById("fields");
+		for (const child of fields.children) {
+		  child.setAttribute("disabled", true);
+		}
+		document.getElementById("progress").classList.remove("is-hidden");
+		document.getElementById("submit").setAttribute("disabled", true);
+	}
+	
+	function enableControls() {		
+		const fields = document.getElementById("fields");
+		for (const child of fields.children) {
+		  child.removeAttribute("disabled");
+		}		
+		document.getElementById("progress").classList.add("is-hidden");
+		document.getElementById("submit").removeAttribute("disabled");
+	}
+	
+  </script>
+
+  <body>
+    <div id="top" class="container" role="document">
+      
+	  <center>
+        <h1>Heater Monitor Config</h1>
+      </center>
+
+      <main role="main">
+        
+        <section id="fields">         
+          
+            <fieldset>
+              <legend>Network Connection</legend>
+              <p>
+                <label for="networkName">Wi-Fi Access Point</label>
+                <input id="networkName" type="text" placeholder="Enter Wi-Fi access point name" value="%NETWORK_NAME%" />
+              </p>
+			  <p>
+                <label for="networkPassword">Password</label>
+                <input id="networkPassword" type="password" placeholder="Enter password" value="%NETWORK_PASSWORD%" />
+              </p>
+            </fieldset>
+			
+			<br>
+			
+            <fieldset>
+              <legend>Telegram Bot</legend>
+              <p>
+                <label for="botToken">Bot Token</label>				
+				<textarea id="botToken" rows="2" cols="48" placeholder="Enter Telegram bot token">%BOT_TOKEN%</textarea>
+              </p>
+			  <p>
+                <label for="botAdmin">Bot Admin</label>				
+				<input id="botAdmin" type="text" placeholder="Enter Telegram username who allowed to access the bot" value="%BOT_ADMIN%" />
+              </p>
+			  <p>
+                <label for="otaUpdatePassword">Password for OTA updates</label>
+                <input id="otaUpdatePassword" type="password" placeholder="Enter password for OTA updates" value="%OTA_UPDATE_PASSWORD%" />
+              </p>
+            </fieldset>
+			
+			<br>
+			
+			<fieldset>
+              <legend>ThingSpeak Integration</legend>
+              <p>
+                <label for="thingSpeakEnabled">
+					<input id="thingSpeakEnabled" name="thingSpeakEnabled" type="checkbox" %THINGSPEAK_ENABLED% onchange="onThingSpeakCheckChanged(event);">
+					Enable ThingSpeak Integration
+				</label>
+              </p>
+			  <p>
+                <label for="thingSpeakApiKey" class="thingspeak">ThingSpeak Write API Key</label>				
+				<input id="thingSpeakApiKey" type="text" class="thingspeak" placeholder="Enter ThingSpeak API Key to send data" value="%THINGSPEAK_API_KEY%" %THINGSPEAK_API_KEY_DISABLED% />
+              </p>
+			  <p>
+                <label for="thingSpeakReportInterval">ThingSpeak report interval, seconds</label>				
+				<input id="thingSpeakReportInterval" type="number" class="thingspeak" min="1" step="1" placeholder="Enter ThingSpeak report interval, in seconds" value="%THINGSPEAK_REPORT_INTERVAL%" %THINGSPEAK_API_KEY_DISABLED% />
+              </p>
+            </fieldset>
+			
+			<br>
+			
+			<center>
+				<p id="progress-message"></p>
+				<div id="progress" class="is-hidden">
+					<progress>progress</progress>
+				</div>
+				<button id="submit" class="button primary" type="button" onclick="submit();">Save</button>
+				<button id="reboot" class="button error" type="button" onclick="if (confirm('Reboot the device?')) reboot();">Reboot</button>
+			</center>
+          
+		    <br>
+		  
+        </section>
+      </main>
+    </div>
+  </body>
+  
+</html>
