@@ -10,7 +10,7 @@
 
 /* INITIALIZATION CONSTANTS */
 
-#define VERSION "0.8"
+#define VERSION "0.9"
 #define HOSTNAME "HeaterMonitor"
 
 /***************************/
@@ -86,9 +86,10 @@ Disp595_4 disp(DISPLAY_DIO_PIN, DISPLAY_CLK_PIN, DISPLAY_LAT_PIN);
 // time of bot initialization
 uint32_t startUnix;
 
-// current pressure value
+// timestamp when pressure has 0 value
 unsigned long pressureZeroLastTimestamp;
-float pressureUncalibrated = -1;
+
+// current pressure value
 float pressure = -1;
 
 // current temperature value
@@ -838,27 +839,8 @@ void getPressure() {
   unsigned long currentTime = millis();
 
   if (currentTime - pressureZeroLastTimestamp > 10000) {
-
-    // smoothing required, because sensor is alanog
-  
-    // smoothed, but uncalibrated value
-    pressureUncalibrated = expRunningAverage(pressureRaw, pressureUncalibrated, 0.05);
-  
-    // "x" needs to be calibrated:
-    // this formula is empiric, based on comparison
-    // of measured values from sensor with cailbrated manometer.
-    // use square fitting here.
-    // !!! 
-    // Polynomial coefficients depends on specific sensor 
-    // and also may change during time for the same sensor.
-    // !!!
-  
-    float x = pressureUncalibrated;
-    float x2 = x*x;
-    float x3 = x2*x;
-    float x4 = x3*x;
-    
-    pressure = -0.00660182 * x4 + 0.0756494 * x3 - 0.323713 * x2 + 1.55346 * x;
+    // smoothing required, because sensor is analog
+    pressure = expRunningAverage(pressureRaw, pressure, 0.05);
   }
   else {
     pressure = -1;
